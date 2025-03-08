@@ -1,0 +1,52 @@
+# Workflow for generating and deploying Compodoc documentation to GitHub Pages
+name: Deploy Compodoc Documentation
+
+on:
+  push:
+    branches: ["main"]  # Runs on pushes to the main branch
+  workflow_dispatch:  # Allows manual trigger from GitHub Actions tab
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  # Build job
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18  # Adjust as needed
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate Compodoc documentation
+        run: npx compodoc -p tsconfig.json -d docs --silent  # Generates docs in 'docs/' folder
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs  # Upload Compodoc-generated docs for deployment
+
+  # Deployment job
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
